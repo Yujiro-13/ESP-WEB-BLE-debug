@@ -12,28 +12,31 @@
     <h3>ESP-WEB-BLE-debug</h3>
 
     <div class="parent">
-        <div class="div1"> 
+        <div class="div1">
             <p>menu</p>
         </div>
-        <div class="div2"> 
+        <div class="div2">
             <p>service list</p>
         </div>
-        <div class="div3"> 
+        <div class="div3">
             <p>service uuid</p>
-            <p>aaa</p>
-            <p>aaa</p>
-            <p>aaaaaaaaaaaaaaa</p>
+            <button class="btn btn-primary w-10" v-on:click="ble_connect()" v-if="!ble_isConnected">Connect</button>
+            <button class="btn btn-primary w-10" v-on:click="ble_disconnect()" v-else>Disconnect</button>
+            <input type="text" class="form-control" v-model="ble_target_serviceuuid"><br>
+            <p>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</p>
+            <p>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</p>
+            <p>aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</p>
         </div>
-        <div class="div4"> 
+        <div class="div4">
             <p>graph</p>
         </div>
-        <div class="div5"> 
+        <div class="div5">
             <p>graph 1</p>
         </div>
-        <div class="div6"> 
+        <div class="div6">
             <p>value list</p>
         </div>
-        <div class="div7"> 
+        <div class="div7">
             <p>value 1</p>
         </div>
     </div>

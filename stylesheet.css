@@ -45,10 +45,13 @@ h3 {
 
 
 .div3::-webkit-scrollbar {
+    display: none;
+    /*
     width: 5px;
     height: 5px;
     background-color: rgb(105, 101, 101);
     border-radius: 100px;
+    */
 }
 
 .div4 {
@@ -61,6 +64,18 @@ h3 {
     color: white;
     background-color: rgba(0, 0, 0, 0.800);
     grid-area: 3 / 2 / 8 / 6;
+    overflow: scroll;
+    scroll-behavior: smooth;
+}
+
+.div5::-webkit-scrollbar {
+    display: none;
+    /*
+    width: 5px;
+    height: 5px;
+    background-color: rgb(105, 101, 101);
+    border-radius: 100px;
+    */
 }
 
 .div6 {
@@ -73,4 +88,16 @@ h3 {
     color: white;
     background-color: rgba(0, 0, 0, 0.800);
     grid-area: 3 / 6 / 8 / 7;
+    overflow: scroll;
+    scroll-behavior: smooth;
+}
+
+.div7::-webkit-scrollbar {
+    display: none;
+    /*
+    width: 5px;
+    height: 5px;
+    background-color: rgb(105, 101, 101);
+    border-radius: 100px;
+    */
 }
