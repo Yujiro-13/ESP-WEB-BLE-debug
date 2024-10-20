@@ -1,0 +1,28 @@
+.parent {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    grid-column-gap: 2px;
+    grid-row-gap: 2px;
+    background-color: black;
+}
+
+.div1 {
+    grid-area: 1 / 1 / 2 / 6;
+    background-color: aqua;
+}
+
+.div2 {
+    grid-area: 2 / 1 / 6 / 2;
+    background-color: blue;
+}
+
+.div3 {
+    grid-area: 2 / 2 / 6 / 5;
+    background-color: green;
+}
+
+.div4 {
+    grid-area: 2 / 5 / 6 / 6;
+    background-color: yellow;
+}
