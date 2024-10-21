@@ -1,166 +1,194 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BLEモニターアプリ</title>
-  <link rel="stylesheet" href="stylesheet.css">
-  <script src="https://unpkg.com/vue@3.2.45/dist/vue.global.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLEモニターアプリ</title>
+    <link rel="stylesheet" href="stylesheet.css">
+    <script src="https://unpkg.com/vue@3.2.45/dist/vue.global.js"></script>
 </head>
+
 <body>
-  <div id="app" class="app-container">
-    <div class="header">
-      <h1 class="title">BLEモニターアプリ</h1>
+    <div id="app" class="app-container">
+        <div class="header">
+            <h1 class="title">BLEモニターアプリ</h1>
+        </div>
+
+        <div class="menu">
+            <p>
+                menu
+            </p>
+        </div>
+
+        <div class="service-list">
+            <p>
+                service list
+            </p>
+        </div>
+
+        <div class="graph-list">
+            <p>
+                graph list
+            </p>
+        </div>
+
+        <div class="data-list">
+            <p>
+                data list
+            </p>
+        </div>
+
+        <div class="main">
+            <!-- 左側ペイン: BLE接続 -->
+            <div class="left-pane">
+                <textarea v-model="serviceUUID" placeholder="サービスUUID (128bit)" class="input-textarea"></textarea>
+                <button @click="connectToBLE" :disabled="isConnecting" class="btn">
+                    {{ isConnected ? '接続解除' : isConnecting ? '接続中...' : '接続' }}
+                </button>
+
+                <!-- Characteristics リスト -->
+                <div v-for="char in characteristics" :key="char.uuid" class="characteristic">
+                    <label class="checkbox-label">
+                        <input type="checkbox" v-model="selectedCharacteristics" :value="char.uuid" />
+                        {{ char.uuid }}
+                    </label>
+                </div>
+            </div>
+
+            <!-- 中央ペイン: グラフ設定と描画 -->
+            <div class="center-pane">
+                <div class="grid-settings">
+                    <label>行数:</label>
+                    <input type="number" v-model="graphLayout.rows" class="input-number">
+                    <label>列数:</label>
+                    <input type="number" v-model="graphLayout.cols" class="input-number">
+                </div>
+                <div class="grid-container"
+                    :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
+                    <div v-for="uuid in selectedCharacteristics" :key="uuid" class="grid-item">
+                        <canvas :ref="'canvas_' + uuid" width="300" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側ペイン: データ表示 -->
+            <div class="right-pane">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>名前</th>
+                            <th>データタイプ</th>
+                            <th>値</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="char in characteristics" :key="char.uuid">
+                            <td>{{ char.uuid }}</td>
+                            <td>{{ char.properties.notify ? 'Notification' : 'Read/Write' }}</td>
+                            <td>{{ data[char.uuid] || '-' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 接続中のオーバーレイ -->
+        <div v-if="isConnecting" class="overlay">
+            <div class="overlay-content">BLEデバイスに接続中...</div>
+        </div>
     </div>
 
-    <div class="main">
-      <!-- 左側ペイン: BLE接続 -->
-      <div class="left-pane">
-        <textarea v-model="serviceUUID" placeholder="サービスUUID (128bit)" class="input-textarea"></textarea>
-        <button @click="connectToBLE" :disabled="isConnecting" class="btn">
-          {{ isConnected ? '接続解除' : isConnecting ? '接続中...' : '接続' }}
-        </button>
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    serviceUUID: '',
+                    isConnected: false,
+                    isConnecting: false,
+                    characteristics: [],
+                    selectedCharacteristics: [],
+                    graphLayout: { rows: 1, cols: 1 },
+                    data: {},
+                    chartData: {}
+                };
+            },
+            methods: {
+                async connectToBLE() {
+                    this.isConnecting = true;
+                    try {
+                        const options = this.serviceUUID
+                            ? { filters: [{ services: [this.serviceUUID] }] }
+                            : { acceptAllDevices: true };
+                        const device = await navigator.bluetooth.requestDevice(options);
+                        const server = await device.gatt.connect();
+                        let chars = [];
+                        for (let service of await server.getPrimaryServices()) {
+                            chars = chars.concat(await service.getCharacteristics());
+                        }
+                        this.characteristics = chars;
+                        this.isConnected = true;
 
-        <!-- Characteristics リスト -->
-        <div v-for="char in characteristics" :key="char.uuid" class="characteristic">
-          <label class="checkbox-label">
-            <input type="checkbox" v-model="selectedCharacteristics" :value="char.uuid" />
-            {{ char.uuid }}
-          </label>
-        </div>
-      </div>
+                        chars.forEach(char => {
+                            if (char.properties.notify) {
+                                char.startNotifications().then(() => {
+                                    char.addEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
+                                });
+                            }
+                        });
+                    } catch (error) {
+                        console.error('BLE接続エラー:', error);
+                    } finally {
+                        this.isConnecting = false;
+                    }
+                },
+                handleCharacteristicValueChanged(event) {
+                    const char = event.target;
+                    const value = new TextDecoder('utf-8').decode(char.value);
+                    this.data = { ...this.data, [char.uuid]: value };
+                    if (this.selectedCharacteristics.includes(char.uuid)) {
+                        this.updateChartData(char.uuid, parseFloat(value));
+                    }
+                },
+                updateChartData(uuid, value) {
+                    if (!this.chartData[uuid]) this.chartData[uuid] = [];
+                    this.chartData[uuid].push({ time: new Date(), value });
+                    if (this.chartData[uuid].length > 50) this.chartData[uuid].shift();
 
-      <!-- 中央ペイン: グラフ設定と描画 -->
-      <div class="center-pane">
-        <div class="grid-settings">
-          <label>行数:</label>
-          <input type="number" v-model="graphLayout.rows" class="input-number">
-          <label>列数:</label>
-          <input type="number" v-model="graphLayout.cols" class="input-number">
-        </div>
-        <div class="grid-container" :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
-          <div v-for="uuid in selectedCharacteristics" :key="uuid" class="grid-item">
-            <canvas :ref="'canvas_' + uuid" width="300" height="200"></canvas>
-          </div>
-        </div>
-      </div>
+                    this.drawChart(uuid);
+                },
+                drawChart(uuid) {
+                    const canvas = this.$refs['canvas_' + uuid];
+                    if (!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    const data = this.chartData[uuid] || [];
 
-      <!-- 右側ペイン: データ表示 -->
-      <div class="right-pane">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>名前</th>
-              <th>データタイプ</th>
-              <th>値</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="char in characteristics" :key="char.uuid">
-              <td>{{ char.uuid }}</td>
-              <td>{{ char.properties.notify ? 'Notification' : 'Read/Write' }}</td>
-              <td>{{ data[char.uuid] || '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#4CAF50";
+                    ctx.lineWidth = 2;
 
-    <!-- 接続中のオーバーレイ -->
-    <div v-if="isConnecting" class="overlay">
-      <div class="overlay-content">BLEデバイスに接続中...</div>
-    </div>
-  </div>
+                    const xStep = canvas.width / 49;
+                    const yMax = Math.max(...data.map(d => d.value), 1);
+                    const yMin = Math.min(...data.map(d => d.value), 0);
 
-  <script>
-    const app = Vue.createApp({
-      data() {
-        return {
-          serviceUUID: '',
-          isConnected: false,
-          isConnecting: false,
-          characteristics: [],
-          selectedCharacteristics: [],
-          graphLayout: { rows: 1, cols: 1 },
-          data: {},
-          chartData: {}
-        };
-      },
-      methods: {
-        async connectToBLE() {
-          this.isConnecting = true;
-          try {
-            const options = this.serviceUUID
-              ? { filters: [{ services: [this.serviceUUID] }] }
-              : { acceptAllDevices: true };
-            const device = await navigator.bluetooth.requestDevice(options);
-            const server = await device.gatt.connect();
-            let chars = [];
-            for (let service of await server.getPrimaryServices()) {
-              chars = chars.concat(await service.getCharacteristics());
+                    data.forEach((point, index) => {
+                        const x = index * xStep;
+                        const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * canvas.height;
+                        if (index === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    });
+
+                    ctx.stroke();
+                }
             }
-            this.characteristics = chars;
-            this.isConnected = true;
+        });
 
-            chars.forEach(char => {
-              if (char.properties.notify) {
-                char.startNotifications().then(() => {
-                  char.addEventListener('characteristicvaluechanged', this.handleCharacteristicValueChanged);
-                });
-              }
-            });
-          } catch (error) {
-            console.error('BLE接続エラー:', error);
-          } finally {
-            this.isConnecting = false;
-          }
-        },
-        handleCharacteristicValueChanged(event) {
-          const char = event.target;
-          const value = new TextDecoder('utf-8').decode(char.value);
-          this.data = { ...this.data, [char.uuid]: value };
-          if (this.selectedCharacteristics.includes(char.uuid)) {
-            this.updateChartData(char.uuid, parseFloat(value));
-          }
-        },
-        updateChartData(uuid, value) {
-          if (!this.chartData[uuid]) this.chartData[uuid] = [];
-          this.chartData[uuid].push({ time: new Date(), value });
-          if (this.chartData[uuid].length > 50) this.chartData[uuid].shift();
-
-          this.drawChart(uuid);
-        },
-        drawChart(uuid) {
-          const canvas = this.$refs['canvas_' + uuid];
-          if (!canvas) return;
-          const ctx = canvas.getContext('2d');
-          const data = this.chartData[uuid] || [];
-
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          ctx.beginPath();
-          ctx.strokeStyle = "#4CAF50";
-          ctx.lineWidth = 2;
-
-          const xStep = canvas.width / 49;
-          const yMax = Math.max(...data.map(d => d.value), 1);
-          const yMin = Math.min(...data.map(d => d.value), 0);
-
-          data.forEach((point, index) => {
-            const x = index * xStep;
-            const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * canvas.height;
-            if (index === 0) {
-              ctx.moveTo(x, y);
-            } else {
-              ctx.lineTo(x, y);
-            }
-          });
-
-          ctx.stroke();
-        }
-      }
-    });
-
-    app.mount('#app');
-  </script>
+        app.mount('#app');
+    </script>
 </body>
+
 </html>
