@@ -51,7 +51,7 @@
     padding: 16px;
     overflow-y: auto;
     border-right: 1px solid #4a5568;
-    overflow: hidden;
+    overflow: auto;
 }
 
 .left-pane {
