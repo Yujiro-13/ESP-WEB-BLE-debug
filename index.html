@@ -144,12 +144,28 @@
                 },
                 handleCharacteristicValueChanged(event) {
                     const char = event.target;
-                    const value = new TextDecoder('utf-8').decode(char.value);
+
+                    // バイナリデータをUint8Arrayとして受け取る
+                    const value = new Uint8Array(char.value.buffer);
+
+                    // ここでデコードする場合は、必要に応じて処理を変更
+                    // 例：そのままバイナリデータを表示する
                     this.data = { ...this.data, [char.uuid]: value };
+
+                    // グラフ描画用に数値データが必要な場合、変換を行う
+                    const decodedValue = this.decodeBinaryData(value); // 変換ロジックを実装
                     if (this.selectedCharacteristics.includes(char.uuid)) {
-                        this.updateChartData(char.uuid, parseFloat(value));
+                        this.updateChartData(char.uuid, decodedValue);
                     }
                 },
+
+                decodeBinaryData(value) {
+                    // ここでバイナリデータから必要な形式に変換する
+                    // 例として、Uint8Arrayを浮動小数点数に変換する場合
+                    const floatValue = new DataView(value.buffer).getFloat32(0, true); // エンディアンネスを指定
+                    return floatValue;
+                },
+
                 updateChartData(uuid, value) {
                     if (!this.chartData[uuid]) this.chartData[uuid] = [];
                     this.chartData[uuid].push({ time: new Date(), value });
