@@ -150,7 +150,7 @@
 
                     // ここでデコードする場合は、必要に応じて処理を変更
                     // 例：そのままバイナリデータを表示する
-                    this.data = { ...this.data, [char.uuid]: value };
+                    this.data = { ...this.data, [char.uuid]: this.decodeBinaryData(value) };
 
                     // グラフ描画用に数値データが必要な場合、変換を行う
                     const decodedValue = this.decodeBinaryData(value); // 変換ロジックを実装
