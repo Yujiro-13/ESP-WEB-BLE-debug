@@ -175,23 +175,34 @@
                 },
 
                 updateChartData(uuid, value) {
-                    // データが数値として処理されることを前提に、グラフを更新
-                    if (!this.chartData[uuid]) this.chartData[uuid] = [];
+                    // 初期化されていない場合は空配列を設定
+                    if (!this.chartData[uuid]) {
+                        this.chartData[uuid] = [];
+                        this.drawChart(uuid);  // データがなくてもグラフを初期化
+                    }
 
-                    // グラフ用データにタイムスタンプと値を追加
+                    // データを追加
                     this.chartData[uuid].push({ time: new Date(), value });
 
-                    // データが50ポイントを超えた場合、古いデータを削除
+                    // 50ポイントを超えた場合は、古いデータを削除
                     if (this.chartData[uuid].length > 50) this.chartData[uuid].shift();
 
-                    // グラフの描画
+                    // グラフを更新
                     this.drawChart(uuid);
                 },
                 drawChart(uuid) {
                     const canvas = this.$refs['canvas_' + uuid];
-                    if (!canvas) return;
+                    if (!canvas) {
+                        console.error(`Canvas for ${uuid} not found`);
+                        return;
+                    }
                     const ctx = canvas.getContext('2d');
                     const data = this.chartData[uuid] || [];
+
+                    if (data.length === 0) {
+                        console.warn(`No data to draw for ${uuid}`);
+                        return;
+                    }
 
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     ctx.beginPath();
@@ -202,7 +213,6 @@
                     const yMax = Math.max(...data.map(d => d.value), 1);
                     const yMin = Math.min(...data.map(d => d.value), 0);
 
-                    // データポイントをグラフに描画
                     data.forEach((point, index) => {
                         const x = index * xStep;
                         const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * canvas.height;
