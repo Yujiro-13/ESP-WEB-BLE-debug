@@ -67,9 +67,8 @@
             <div class="grid-container"
                 :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
                 <div v-for="uuid in selectedCharacteristics" :key="uuid" class="grid-item">
-                    <canvas :ref="el => $refs['canvas_' + uuid] = el" width="300" height="200"></canvas>
+                    <canvas :ref="canvas => $refs['canvas_' + uuid] = canvas" width="300" height="200"></canvas>
                 </div>
-
             </div>
         </div>
 
@@ -193,14 +192,15 @@
                     });
                 },
                 drawChart(uuid) {
+                    // canvas要素が正しく取得できているかを確認
+                    console.log(this.$refs['canvas_' + uuid]);
+
                     const canvas = this.$refs['canvas_' + uuid];
-
-                    console.log(this.$refs['canvas_' + uuid]);  // canvas が存在するか確認
-
-                    if (!canvas) {
-                        console.error(`Canvas for ${uuid} not found`);
+                    if (!canvas || typeof canvas.getContext !== 'function') {
+                        console.error(`Canvas element not found or invalid for ${uuid}`);
                         return;
                     }
+
                     const ctx = canvas.getContext('2d');
                     const data = this.chartData[uuid] || [];
 
@@ -218,6 +218,7 @@
                     const yMax = Math.max(...data.map(d => d.value), 1);
                     const yMin = Math.min(...data.map(d => d.value), 0);
 
+                    // データポイントをグラフに描画
                     data.forEach((point, index) => {
                         const x = index * xStep;
                         const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * canvas.height;
@@ -230,6 +231,7 @@
 
                     ctx.stroke();
                 }
+
             }
         });
 
