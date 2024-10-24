@@ -39,7 +39,6 @@
             </p>
         </div>
 
-
         <!-- 左側ペイン: BLE接続 -->
         <div class="left-pane">
             <textarea v-model="serviceUUID" placeholder="ServiceUUID (128bit)" class="input-textarea"></textarea>
@@ -92,7 +91,6 @@
                 </tbody>
             </table>
         </div>
-
 
         <!-- 接続中のオーバーレイ -->
         <div v-if="isConnecting" class="overlay">
@@ -229,14 +227,10 @@
                             ctx.lineTo(x, y);
                         }
                     });
-
                     ctx.stroke();
                 }
-
-
             }
         });
-
         app.mount('#app');
     </script>
 </body>
