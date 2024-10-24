@@ -197,7 +197,7 @@
                     // ref 配列を使用して canvas を取得
                     const canvas = this.$refs['canvas_' + index];
                     if (!canvas || typeof canvas.getContext !== 'function') {
-                        console.error(`Canvas element not found or invalid for ${uuid}`);
+                        console.error(`Canvas element not found or invalid for ${uuid} at index ${index}`);
                         return;
                     }
 
