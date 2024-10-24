@@ -66,9 +66,10 @@
             </div>
             <div class="grid-container"
                 :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
-                <div v-for="uuid in selectedCharacteristics" :key="uuid" class="grid-item">
-                    <canvas :ref="canvas => $refs['canvas_' + uuid] = canvas" width="300" height="200"></canvas>
+                <div v-for="(uuid, index) in selectedCharacteristics" :key="uuid" class="grid-item">
+                    <canvas :ref="'canvas_' + index" width="300" height="200"></canvas>
                 </div>
+
             </div>
         </div>
 
@@ -147,6 +148,7 @@
 
                     // バイナリデータをUint8Arrayとして受け取る
                     const value = new Uint8Array(char.value.buffer);
+                    const index = this.selectedCharacteristics.indexOf(char.uuid);
 
                     console.log(`Notification received from characteristic ${char.uuid}`);
                     console.log(`Raw data:`, value);
@@ -158,7 +160,7 @@
                     // グラフ描画用に数値データが必要な場合、変換を行う
                     const decodedValue = this.decodeBinaryData(value); // 変換ロジックを実装
                     if (this.selectedCharacteristics.includes(char.uuid)) {
-                        this.updateChartData(char.uuid, decodedValue);
+                        this.updateChartData(char.uuid, index, decodedValue);
                     }
                 },
 
@@ -174,7 +176,7 @@
                     }
                 },
 
-                updateChartData(uuid, value) {
+                updateChartData(uuid, index, value) {
                     // 初期化されていない場合は空配列を設定
                     if (!this.chartData[uuid]) {
                         this.chartData[uuid] = [];
@@ -188,14 +190,12 @@
 
                     // nextTickでDOM更新後に描画処理
                     this.$nextTick(() => {
-                        this.drawChart(uuid);
+                        this.drawChart(uuid, index);
                     });
                 },
-                drawChart(uuid) {
-                    // canvas要素が正しく取得できているかを確認
-                    console.log(this.$refs['canvas_' + uuid]);
-
-                    const canvas = this.$refs['canvas_' + uuid];
+                drawChart(uuid, index) {
+                    // ref 配列を使用して canvas を取得
+                    const canvas = this.$refs['canvas_' + index];
                     if (!canvas || typeof canvas.getContext !== 'function') {
                         console.error(`Canvas element not found or invalid for ${uuid}`);
                         return;
@@ -231,6 +231,7 @@
 
                     ctx.stroke();
                 }
+
 
             }
         });
