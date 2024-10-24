@@ -67,8 +67,9 @@
             <div class="grid-container"
                 :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
                 <div v-for="uuid in selectedCharacteristics" :key="uuid" class="grid-item">
-                    <canvas :ref="'canvas_' + uuid" width="300" height="200"></canvas>
+                    <canvas :ref="el => $refs['canvas_' + uuid] = el" width="300" height="200"></canvas>
                 </div>
+
             </div>
         </div>
 
@@ -178,20 +179,24 @@
                     // 初期化されていない場合は空配列を設定
                     if (!this.chartData[uuid]) {
                         this.chartData[uuid] = [];
-                        this.drawChart(uuid);  // データがなくてもグラフを初期化
                     }
 
-                    // データを追加
+                    // 新しいデータを追加
                     this.chartData[uuid].push({ time: new Date(), value });
 
                     // 50ポイントを超えた場合は、古いデータを削除
                     if (this.chartData[uuid].length > 50) this.chartData[uuid].shift();
 
-                    // グラフを更新
-                    this.drawChart(uuid);
+                    // nextTickでDOM更新後に描画処理
+                    this.$nextTick(() => {
+                        this.drawChart(uuid);
+                    });
                 },
                 drawChart(uuid) {
                     const canvas = this.$refs['canvas_' + uuid];
+
+                    console.log(this.$refs['canvas_' + uuid]);  // canvas が存在するか確認
+
                     if (!canvas) {
                         console.error(`Canvas for ${uuid} not found`);
                         return;
