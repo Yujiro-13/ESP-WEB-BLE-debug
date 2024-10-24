@@ -164,16 +164,27 @@
 
                 decodeBinaryData(value) {
                     // ここでバイナリデータから必要な形式に変換する
-                    // 例として、Uint8Arrayを浮動小数点数に変換する場合
-                    const floatValue = new DataView(value.buffer).getFloat32(0, true); // エンディアンネスを指定
-                    return floatValue;
+                    //データが4バイト以上の場合はFloat32に変換
+                    if (value.byteLength >= 4) {
+                        return new DataView(value.buffer).getFloat32(0, true); // リトルエンディアンでデコード
+                    } else {
+                        // データが短い場合は、Uint8Arrayの各要素を整数値として使用
+                        // Uint8Arrayの最初の要素だけを数値に変換（例: 1バイトの場合）
+                        return value[0];  // または、他の必要な変換をここで行う
+                    }
                 },
 
                 updateChartData(uuid, value) {
+                    // データが数値として処理されることを前提に、グラフを更新
                     if (!this.chartData[uuid]) this.chartData[uuid] = [];
+
+                    // グラフ用データにタイムスタンプと値を追加
                     this.chartData[uuid].push({ time: new Date(), value });
+
+                    // データが50ポイントを超えた場合、古いデータを削除
                     if (this.chartData[uuid].length > 50) this.chartData[uuid].shift();
 
+                    // グラフの描画
                     this.drawChart(uuid);
                 },
                 drawChart(uuid) {
@@ -191,6 +202,7 @@
                     const yMax = Math.max(...data.map(d => d.value), 1);
                     const yMin = Math.min(...data.map(d => d.value), 0);
 
+                    // データポイントをグラフに描画
                     data.forEach((point, index) => {
                         const x = index * xStep;
                         const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * canvas.height;
