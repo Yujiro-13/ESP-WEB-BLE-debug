@@ -67,7 +67,7 @@
             <div class="grid-container"
                 :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
                 <div v-for="(uuid, index) in selectedCharacteristics" :key="uuid" class="grid-item">
-                    <canvas :ref="'canvas_' + index" width="300" height="200"></canvas>
+                    <canvas ref="canvas" width="300" height="200"></canvas>
                 </div>
 
             </div>
@@ -195,7 +195,8 @@
                 },
                 drawChart(uuid, index) {
                     // ref 配列を使用して canvas を取得
-                    const canvas = this.$refs['canvas_' + index];
+                    console.log(this.$refs.canvas);
+                    const canvas = this.$refs.canvas[index]; // 配列として扱う
                     if (!canvas || typeof canvas.getContext !== 'function') {
                         console.error(`Canvas element not found or invalid for ${uuid} at index ${index}`);
                         return;
