@@ -148,6 +148,9 @@
                     // バイナリデータをUint8Arrayとして受け取る
                     const value = new Uint8Array(char.value.buffer);
 
+                    console.log(`Notification received from characteristic ${char.uuid}`);
+                    console.log(`Raw data:`, value);
+
                     // ここでデコードする場合は、必要に応じて処理を変更
                     // 例：そのままバイナリデータを表示する
                     this.data = { ...this.data, [char.uuid]: this.decodeBinaryData(value) };
