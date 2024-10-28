@@ -192,9 +192,7 @@
                     });
                 },
                 drawChart(uuid, index) {
-                    // ref 配列を使用して canvas を取得
-                    console.log(this.$refs.canvas);
-                    const canvas = this.$refs.canvas[index]; // 配列として扱う
+                    const canvas = this.$refs.canvas[index];
                     if (!canvas || typeof canvas.getContext !== 'function') {
                         console.error(`Canvas element not found or invalid for ${uuid} at index ${index}`);
                         return;
@@ -202,22 +200,55 @@
 
                     const ctx = canvas.getContext('2d');
                     const data = this.chartData[uuid] || [];
-
                     if (data.length === 0) {
                         console.warn(`No data to draw for ${uuid}`);
                         return;
                     }
 
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.beginPath();
-                    ctx.strokeStyle = "#4CAF50";
-                    ctx.lineWidth = 2;
 
+                    // データ範囲の設定
                     const xStep = canvas.width / 49;
                     const yMax = Math.max(...data.map(d => d.value), 1);
                     const yMin = Math.min(...data.map(d => d.value), 0);
 
-                    // データポイントをグラフに描画
+                    // 目盛り線とラベル
+                    const numYTicks = 5;
+                    const yTickStep = (yMax - yMin) / numYTicks;
+
+                    ctx.strokeStyle = "#ddd";
+                    ctx.lineWidth = 1;
+                    ctx.font = "10px Arial";
+                    ctx.fillStyle = "#000";
+
+                    // Y軸目盛りとラベル
+                    for (let i = 0; i <= numYTicks; i++) {
+                        const y = canvas.height - (i * yTickStep) / (yMax - yMin) * canvas.height;
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(canvas.width, y);
+                        ctx.stroke();
+                        ctx.fillText((yMin + i * yTickStep).toFixed(2), 5, y - 2);
+                    }
+
+                    // X軸目盛りとラベル
+                    const numXTicks = 5;
+                    const xTickStep = canvas.width / numXTicks;
+                    for (let i = 0; i <= numXTicks; i++) {
+                        const x = i * xTickStep;
+                        const time = data.length > 0 ? data[Math.floor((i / numXTicks) * data.length)].time : new Date();
+                        const label = `${time.getHours()}:${time.getMinutes()}:${time.getSeconds()}`;
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, canvas.height);
+                        ctx.stroke();
+                        ctx.fillText(label, x + 2, canvas.height - 5);
+                    }
+
+                    // データライン描画
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#4CAF50";
+                    ctx.lineWidth = 2;
                     data.forEach((point, index) => {
                         const x = index * xStep;
                         const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * canvas.height;
@@ -229,6 +260,7 @@
                     });
                     ctx.stroke();
                 }
+
             }
         });
         app.mount('#app');
