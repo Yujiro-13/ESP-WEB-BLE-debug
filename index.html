@@ -4,9 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BLE Monitor Web App </title>
+    <title>BLE Monitor Web App</title>
     <link rel="stylesheet" href="stylesheet.css">
     <script src="https://unpkg.com/vue@3.2.45/dist/vue.global.js"></script>
+    <!-- Google Charts ライブラリの読み込み -->
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+        google.charts.load('current', { 'packages': ['corechart'] });
+    </script>
 </head>
 
 <body>
@@ -16,27 +21,19 @@
         </div>
 
         <div class="menu">
-            <p>
-                menu
-            </p>
+            <p>menu</p>
         </div>
 
         <div class="service-list">
-            <p>
-                service list
-            </p>
+            <p>service list</p>
         </div>
 
         <div class="graph-list">
-            <p>
-                graph list
-            </p>
+            <p>graph list</p>
         </div>
 
         <div class="data-list">
-            <p>
-                data list
-            </p>
+            <p>data list</p>
         </div>
 
         <!-- 左側ペイン: BLE接続 -->
@@ -64,11 +61,10 @@
                 <input type="number" v-model="graphLayout.cols" class="input-number">
             </div>
             <div class="grid-container"
-                :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
+                :style="{ gridTemplateColumns: repeat(${graphLayout.cols}, 1fr), gridTemplateRows: repeat(${graphLayout.rows}, 1fr) }">
                 <div v-for="(uuid, index) in selectedCharacteristics" :key="uuid" class="grid-item">
-                    <canvas ref="canvas" width="300" height="200"></canvas>
+                    <div :id="'chart-' + index" style="width: 300px; height: 200px;"></div>
                 </div>
-
             </div>
         </div>
 
@@ -143,149 +139,61 @@
                 },
                 handleCharacteristicValueChanged(event) {
                     const char = event.target;
-
-                    // バイナリデータをUint8Arrayとして受け取る
                     const value = new Uint8Array(char.value.buffer);
                     const index = this.selectedCharacteristics.indexOf(char.uuid);
 
                     console.log(`Notification received from characteristic ${char.uuid}`);
-                    console.log(`Raw data:`, value);
+                    console.log('Raw data:', value);
 
-                    // ここでデコードする場合は、必要に応じて処理を変更
-                    // 例：そのままバイナリデータを表示する
                     this.data = { ...this.data, [char.uuid]: value };
 
-                    // グラフ描画用に数値データが必要な場合、変換を行う
-                    const decodedValue = this.decodeBinaryData(value); // 変換ロジックを実装
+                    const decodedValue = this.decodeBinaryData(value);
                     if (this.selectedCharacteristics.includes(char.uuid)) {
                         this.updateChartData(char.uuid, index, decodedValue);
                     }
                 },
-
                 decodeBinaryData(value) {
-                    // ここでバイナリデータから必要な形式に変換する
-                    //データが4バイト以上の場合はFloat32に変換
                     if (value.byteLength >= 4) {
-                        return new DataView(value.buffer).getFloat32(0, true); // リトルエンディアンでデコード
+                        return new DataView(value.buffer).getFloat32(0, true);
                     } else {
-                        // データが短い場合は、Uint8Arrayの各要素を整数値として使用
-                        // Uint8Arrayの最初の要素だけを数値に変換（例: 1バイトの場合）
-                        return value[0];  // または、他の必要な変換をここで行う
+                        return value[0];
                     }
                 },
-
                 updateChartData(uuid, index, value) {
-                    // 初期化されていない場合は空配列を設定
                     if (!this.chartData[uuid]) {
                         this.chartData[uuid] = [];
                     }
-
-                    // 新しいデータを追加
                     this.chartData[uuid].push({ time: new Date(), value });
-
-                    // 50ポイントを超えた場合は、古いデータを削除
                     if (this.chartData[uuid].length > 200) this.chartData[uuid].shift();
 
-                    // nextTickでDOM更新後に描画処理
                     this.$nextTick(() => {
                         this.drawChart(uuid, index);
                     });
                 },
                 drawChart(uuid, index) {
-                    const canvas = this.$refs.canvas[index];
-                    if (!canvas || typeof canvas.getContext !== 'function') {
-                        console.error(`Canvas element not found or invalid for ${uuid} at index ${index}`);
-                        return;
-                    }
-
-                    const ctx = canvas.getContext('2d');
-
-                    // キャンバスの実際の描画サイズをCSSサイズに基づいて設定
-                    canvas.width = canvas.offsetWidth;
-                    canvas.height = canvas.offsetHeight;
-
                     const data = this.chartData[uuid] || [];
-
                     if (data.length === 0) {
                         console.warn(`No data to draw for ${uuid}`);
                         return;
                     }
 
-                    // パディング設定
-                    const padding = 30;
-                    const graphWidth = canvas.width - padding * 2;
-                    const graphHeight = canvas.height - padding * 2;
+                    const chartData = new google.visualization.DataTable();
+                    chartData.addColumn('string', 'Time');
+                    chartData.addColumn('number', 'Value');
 
-                    // グラフの範囲設定
-                    const xStep = graphWidth / (data.length - 1);
-                    const yMax = Math.max(...data.map(d => d.value), 1);
-                    const yMin = Math.min(...data.map(d => d.value), 0);
+                    const formattedData = data.map(point => [point.time.toLocaleTimeString(), point.value]);
+                    chartData.addRows(formattedData);
 
-                    // キャンバスの初期化
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const options = {
+                        title: `Data for ${uuid}`,
+                        curveType: 'function',
+                        legend: { position: 'bottom' },
+                        hAxis: { title: 'Time' },
+                        vAxis: { title: 'Value' }
+                    };
 
-                    // 軸ラベルと目盛りを描画
-                    ctx.font = '12px Arial';
-                    ctx.fillStyle = '#000';
-                    ctx.textAlign = 'center';
-
-                    // 横軸 (時間)
-                    ctx.beginPath();
-                    ctx.moveTo(padding, canvas.height - padding);
-                    ctx.lineTo(canvas.width - padding, canvas.height - padding);
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-
-                    // 横軸ラベルと目盛り
-                    ctx.fillText('Time', canvas.width / 2, canvas.height - 5);
-                    const timeStep = data.length >= 10 ? Math.floor(data.length / 10) : 1;
-                    data.forEach((point, i) => {
-                        if (i % timeStep === 0) {
-                            const x = i * xStep + padding;
-                            ctx.fillText(point.time.toLocaleTimeString(), x, canvas.height - 10);
-                            ctx.beginPath();
-                            ctx.moveTo(x, canvas.height - padding);
-                            ctx.lineTo(x, canvas.height - padding + 5);
-                            ctx.stroke();
-                        }
-                    });
-
-                    // 縦軸 (値)
-                    ctx.beginPath();
-                    ctx.moveTo(padding, canvas.height - padding);
-                    ctx.lineTo(padding, padding);
-                    ctx.strokeStyle = '#333';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-
-                    // 縦軸ラベルと目盛り
-                    ctx.fillText('Value', 15, canvas.height / 2);
-                    const yStep = (yMax - yMin) / 5;
-                    for (let i = 0; i <= 5; i++) {
-                        const yValue = yMin + i * yStep;
-                        const yPos = canvas.height - ((yValue - yMin) / (yMax - yMin)) * graphHeight - padding;
-                        ctx.fillText(yValue.toFixed(1), padding - 15, yPos + 5);
-                        ctx.beginPath();
-                        ctx.moveTo(padding - 5, yPos);
-                        ctx.lineTo(padding, yPos);
-                        ctx.stroke();
-                    }
-
-                    // データポイントを描画
-                    ctx.beginPath();
-                    ctx.strokeStyle = "#4CAF50";
-                    ctx.lineWidth = 2;
-                    data.forEach((point, i) => {
-                        const x = i * xStep + padding;
-                        const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * graphHeight - padding;
-                        if (i === 0) {
-                            ctx.moveTo(x, y);
-                        } else {
-                            ctx.lineTo(x, y);
-                        }
-                    });
-                    ctx.stroke();
+                    const chart = new google.visualization.LineChart(document.getElementById(`chart-${index}`));
+                    chart.draw(chartData, options);
                 }
             }
         });
