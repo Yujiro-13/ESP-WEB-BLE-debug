@@ -210,7 +210,8 @@
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                     // グラフの範囲設定
-                    const xStep = canvas.width / 49;
+                    const padding = 30;  // 軸ラベルと目盛り用のパディング
+                    const xStep = (canvas.width - padding * 2) / (data.length - 1);
                     const yMax = Math.max(...data.map(d => d.value), 1);
                     const yMin = Math.min(...data.map(d => d.value), 0);
 
@@ -221,44 +222,44 @@
 
                     // 横軸 (時間)
                     ctx.beginPath();
-                    ctx.moveTo(40, canvas.height - 30);
-                    ctx.lineTo(canvas.width - 10, canvas.height - 30);
+                    ctx.moveTo(padding, canvas.height - padding);
+                    ctx.lineTo(canvas.width - padding, canvas.height - padding);
                     ctx.strokeStyle = '#333';
                     ctx.lineWidth = 1;
                     ctx.stroke();
 
                     // 横軸ラベルと目盛り
-                    ctx.fillText('Time', canvas.width / 2, canvas.height - 10);
+                    ctx.fillText('Time', canvas.width / 2, canvas.height - 5);
                     const timeStep = data.length >= 10 ? Math.floor(data.length / 10) : 1;
                     data.forEach((point, i) => {
                         if (i % timeStep === 0) {
-                            const x = i * xStep + 40;
-                            ctx.fillText(point.time.toLocaleTimeString(), x, canvas.height - 15);
+                            const x = i * xStep + padding;
+                            ctx.fillText(point.time.toLocaleTimeString(), x, canvas.height - 10);
                             ctx.beginPath();
-                            ctx.moveTo(x, canvas.height - 30);
-                            ctx.lineTo(x, canvas.height - 35);
+                            ctx.moveTo(x, canvas.height - padding);
+                            ctx.lineTo(x, canvas.height - padding + 5);
                             ctx.stroke();
                         }
                     });
 
                     // 縦軸 (値)
                     ctx.beginPath();
-                    ctx.moveTo(40, canvas.height - 30);
-                    ctx.lineTo(40, 10);
+                    ctx.moveTo(padding, canvas.height - padding);
+                    ctx.lineTo(padding, padding);
                     ctx.strokeStyle = '#333';
                     ctx.lineWidth = 1;
                     ctx.stroke();
 
                     // 縦軸ラベルと目盛り
-                    ctx.fillText('Value', 20, canvas.height / 2);
+                    ctx.fillText('Value', 15, canvas.height / 2);
                     const yStep = (yMax - yMin) / 5;
                     for (let i = 0; i <= 5; i++) {
                         const yValue = yMin + i * yStep;
-                        const yPos = canvas.height - ((yValue - yMin) / (yMax - yMin)) * (canvas.height - 40) - 30;
-                        ctx.fillText(yValue.toFixed(1), 20, yPos + 5);
+                        const yPos = canvas.height - ((yValue - yMin) / (yMax - yMin)) * (canvas.height - padding * 2) - padding;
+                        ctx.fillText(yValue.toFixed(1), padding - 15, yPos + 5);
                         ctx.beginPath();
-                        ctx.moveTo(35, yPos);
-                        ctx.lineTo(40, yPos);
+                        ctx.moveTo(padding - 5, yPos);
+                        ctx.lineTo(padding, yPos);
                         ctx.stroke();
                     }
 
@@ -267,8 +268,8 @@
                     ctx.strokeStyle = "#4CAF50";
                     ctx.lineWidth = 2;
                     data.forEach((point, i) => {
-                        const x = i * xStep + 40;
-                        const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * (canvas.height - 40) - 30;
+                        const x = i * xStep + padding;
+                        const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * (canvas.height - padding * 2) - padding;
                         if (i === 0) {
                             ctx.moveTo(x, y);
                         } else {
@@ -277,6 +278,7 @@
                     });
                     ctx.stroke();
                 }
+
             }
         });
         app.mount('#app');
