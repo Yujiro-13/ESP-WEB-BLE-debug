@@ -61,7 +61,7 @@
                 <input type="number" v-model="graphLayout.cols" class="input-number">
             </div>
             <div class="grid-container"
-                :style="{ gridTemplateColumns: repeat(${graphLayout.cols}, 1fr), gridTemplateRows: repeat(${graphLayout.rows}, 1fr) }">
+                :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
                 <div v-for="(uuid, index) in selectedCharacteristics" :key="uuid" class="grid-item">
                     <div :id="'chart-' + index" style="width: 300px; height: 200px;"></div>
                 </div>
