@@ -184,7 +184,7 @@
                     this.chartData[uuid].push({ time: new Date(), value });
 
                     // 50ポイントを超えた場合は、古いデータを削除
-                    if (this.chartData[uuid].length > 100) this.chartData[uuid].shift();
+                    if (this.chartData[uuid].length > 200) this.chartData[uuid].shift();
 
                     // nextTickでDOM更新後に描画処理
                     this.$nextTick(() => {
