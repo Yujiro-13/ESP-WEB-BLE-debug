@@ -184,7 +184,7 @@
                     this.chartData[uuid].push({ time: new Date(), value });
 
                     // 50ポイントを超えた場合は、古いデータを削除
-                    if (this.chartData[uuid].length > 50) this.chartData[uuid].shift();
+                    if (this.chartData[uuid].length > 100) this.chartData[uuid].shift();
 
                     // nextTickでDOM更新後に描画処理
                     this.$nextTick(() => {
@@ -192,9 +192,7 @@
                     });
                 },
                 drawChart(uuid, index) {
-                    // ref 配列を使用して canvas を取得
-                    console.log(this.$refs.canvas);
-                    const canvas = this.$refs.canvas[index]; // 配列として扱う
+                    const canvas = this.$refs.canvas[index];
                     if (!canvas || typeof canvas.getContext !== 'function') {
                         console.error(`Canvas element not found or invalid for ${uuid} at index ${index}`);
                         return;
@@ -208,20 +206,70 @@
                         return;
                     }
 
+                    // キャンバスの初期化
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.beginPath();
-                    ctx.strokeStyle = "#4CAF50";
-                    ctx.lineWidth = 2;
 
+                    // グラフの範囲設定
                     const xStep = canvas.width / 49;
                     const yMax = Math.max(...data.map(d => d.value), 1);
                     const yMin = Math.min(...data.map(d => d.value), 0);
 
-                    // データポイントをグラフに描画
-                    data.forEach((point, index) => {
-                        const x = index * xStep;
-                        const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * canvas.height;
-                        if (index === 0) {
+                    // 軸ラベルと目盛りを描画
+                    ctx.font = '12px Arial';
+                    ctx.fillStyle = '#000';
+                    ctx.textAlign = 'center';
+
+                    // 横軸 (時間)
+                    ctx.beginPath();
+                    ctx.moveTo(40, canvas.height - 30);
+                    ctx.lineTo(canvas.width - 10, canvas.height - 30);
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    // 横軸ラベルと目盛り
+                    ctx.fillText('Time', canvas.width / 2, canvas.height - 10);
+                    const timeStep = data.length >= 10 ? Math.floor(data.length / 10) : 1;
+                    data.forEach((point, i) => {
+                        if (i % timeStep === 0) {
+                            const x = i * xStep + 40;
+                            ctx.fillText(point.time.toLocaleTimeString(), x, canvas.height - 15);
+                            ctx.beginPath();
+                            ctx.moveTo(x, canvas.height - 30);
+                            ctx.lineTo(x, canvas.height - 35);
+                            ctx.stroke();
+                        }
+                    });
+
+                    // 縦軸 (値)
+                    ctx.beginPath();
+                    ctx.moveTo(40, canvas.height - 30);
+                    ctx.lineTo(40, 10);
+                    ctx.strokeStyle = '#333';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+
+                    // 縦軸ラベルと目盛り
+                    ctx.fillText('Value', 20, canvas.height / 2);
+                    const yStep = (yMax - yMin) / 5;
+                    for (let i = 0; i <= 5; i++) {
+                        const yValue = yMin + i * yStep;
+                        const yPos = canvas.height - ((yValue - yMin) / (yMax - yMin)) * (canvas.height - 40) - 30;
+                        ctx.fillText(yValue.toFixed(1), 20, yPos + 5);
+                        ctx.beginPath();
+                        ctx.moveTo(35, yPos);
+                        ctx.lineTo(40, yPos);
+                        ctx.stroke();
+                    }
+
+                    // データポイントを描画
+                    ctx.beginPath();
+                    ctx.strokeStyle = "#4CAF50";
+                    ctx.lineWidth = 2;
+                    data.forEach((point, i) => {
+                        const x = i * xStep + 40;
+                        const y = canvas.height - ((point.value - yMin) / (yMax - yMin)) * (canvas.height - 40) - 30;
+                        if (i === 0) {
                             ctx.moveTo(x, y);
                         } else {
                             ctx.lineTo(x, y);
