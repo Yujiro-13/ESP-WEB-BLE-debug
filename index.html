@@ -7,11 +7,8 @@
     <title>BLE Monitor Web App</title>
     <link rel="stylesheet" href="stylesheet.css">
     <script src="https://unpkg.com/vue@3.2.45/dist/vue.global.js"></script>
-    <!-- Google Charts ライブラリの読み込み -->
+    <!-- Google Chartsのスクリプトを追加 -->
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-    <script type="text/javascript">
-        google.charts.load('current', { 'packages': ['corechart'] });
-    </script>
 </head>
 
 <body>
@@ -60,10 +57,12 @@
                 <label>cols:</label>
                 <input type="number" v-model="graphLayout.cols" class="input-number">
             </div>
+            <!-- 修正箇所 -->
             <div class="grid-container"
                 :style="{ gridTemplateColumns: `repeat(${graphLayout.cols}, 1fr)`, gridTemplateRows: `repeat(${graphLayout.rows}, 1fr)` }">
                 <div v-for="(uuid, index) in selectedCharacteristics" :key="uuid" class="grid-item">
-                    <div :id="'chart-' + index" style="width: 300px; height: 200px;"></div>
+                    <!-- canvasの代わりにdivを使用 -->
+                    <div ref="canvas" style="width: 100%; height: 100%;"></div>
                 </div>
             </div>
         </div>
@@ -139,20 +138,25 @@
                 },
                 handleCharacteristicValueChanged(event) {
                     const char = event.target;
+
+                    // バイナリデータをUint8Arrayとして受け取る
                     const value = new Uint8Array(char.value.buffer);
                     const index = this.selectedCharacteristics.indexOf(char.uuid);
 
                     console.log(`Notification received from characteristic ${char.uuid}`);
                     console.log('Raw data:', value);
 
+                    // データ更新
                     this.data = { ...this.data, [char.uuid]: value };
 
+                    // グラフ描画用に数値データが必要な場合、変換を行う
                     const decodedValue = this.decodeBinaryData(value);
                     if (this.selectedCharacteristics.includes(char.uuid)) {
                         this.updateChartData(char.uuid, index, decodedValue);
                     }
                 },
                 decodeBinaryData(value) {
+                    // バイナリデータの変換
                     if (value.byteLength >= 4) {
                         return new DataView(value.buffer).getFloat32(0, true);
                     } else {
@@ -163,38 +167,43 @@
                     if (!this.chartData[uuid]) {
                         this.chartData[uuid] = [];
                     }
+
+                    // 新しいデータを追加
                     this.chartData[uuid].push({ time: new Date(), value });
+
+                    // 古いデータを削除
                     if (this.chartData[uuid].length > 200) this.chartData[uuid].shift();
 
+                    // nextTickでDOM更新後に描画処理
                     this.$nextTick(() => {
                         this.drawChart(uuid, index);
                     });
                 },
                 drawChart(uuid, index) {
-                    const data = this.chartData[uuid] || [];
-                    if (data.length === 0) {
-                        console.warn(`No data to draw for ${uuid}`);
-                        return;
-                    }
+                    const data = new google.visualization.DataTable();
+                    data.addColumn('datetime', 'Time');
+                    data.addColumn('number', 'Value');
+                    const chartData = this.chartData[uuid] || [];
 
-                    const chartData = new google.visualization.DataTable();
-                    chartData.addColumn('string', 'Time');
-                    chartData.addColumn('number', 'Value');
-
-                    const formattedData = data.map(point => [point.time.toLocaleTimeString(), point.value]);
-                    chartData.addRows(formattedData);
+                    chartData.forEach(point => {
+                        data.addRow([point.time, point.value]);
+                    });
 
                     const options = {
-                        title: `Data for ${uuid}`,
+                        title: `Characteristic ${uuid}`,
                         curveType: 'function',
                         legend: { position: 'bottom' },
-                        hAxis: { title: 'Time' },
-                        vAxis: { title: 'Value' }
+                        hAxis: { format: 'HH:mm:ss' }
                     };
 
-                    const chart = new google.visualization.LineChart(document.getElementById(`chart-${index}`));
-                    chart.draw(chartData, options);
+                    const chartDiv = this.$refs.canvas[index];
+                    const chart = new google.visualization.LineChart(chartDiv);
+                    chart.draw(data, options);
                 }
+            },
+            mounted() {
+                google.charts.load('current', { 'packages': ['corechart'] });
+                google.charts.setOnLoadCallback(this.drawCharts);
             }
         });
         app.mount('#app');
